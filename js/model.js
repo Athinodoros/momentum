@@ -16,7 +16,7 @@ export function initialState() {
     version: CURRENT_VERSION,
     tasks: [],
     wins: [],
-    settings: { quickStartMin: 5, defaultFocusMin: 25 },
+    settings: { quickStartMin: 5, defaultFocusMin: 25, lang: null },
   };
 }
 
@@ -256,53 +256,73 @@ export function momentumStats(state, now = Date.now()) {
 // --- breakdown scaffolding -------------------------------------------------
 
 /**
- * Suggest a tiny starter breakdown for a task title. Deterministic, offline,
- * no AI needed. The point is to beat activation energy: the first step is
- * always something you can do in a couple of minutes. The user edits from here.
+ * The English breakdown catalog. Each entry is a keyword matcher plus a tiny
+ * set of steps; the last entry has no matcher and is the default. Localized
+ * catalogs (see js/i18n.js) follow the same shape.
  */
-export function suggestSteps(title = '') {
-  const t = String(title).toLowerCase();
-
-  if (/\b(email|reply|respond|message|dm|text)\b/.test(t)) {
-    return [
+export const DEFAULT_BREAKDOWNS = [
+  {
+    match: /\b(email|reply|respond|message|dm|text)\b/i,
+    steps: [
       { title: 'Open the thread and read it once', minutes: 2 },
       { title: 'Write a rough reply — ignore polish', minutes: 5 },
       { title: 'Tidy it and hit send', minutes: 3 },
-    ];
-  }
-  if (/\b(write|draft|essay|report|blog|doc|paper|post|article)\b/.test(t)) {
-    return [
+    ],
+  },
+  {
+    match: /\b(write|draft|essay|report|blog|doc|paper|post|article)\b/i,
+    steps: [
       { title: 'Dump bullet points, no full sentences', minutes: 5 },
       { title: 'Turn 3 bullets into rough paragraphs', minutes: 15 },
       { title: 'Read once, fix only the worst bits', minutes: 10 },
-    ];
-  }
-  if (/\b(clean|tidy|laundry|dishes|room|desk|kitchen|wash)\b/.test(t)) {
-    return [
+    ],
+  },
+  {
+    match: /\b(clean|tidy|laundry|dishes|room|desk|kitchen|wash)\b/i,
+    steps: [
       { title: 'Set a 10-min timer, grab a bag/bin', minutes: 1 },
       { title: 'Clear one surface only', minutes: 10 },
       { title: 'Put away 5 things, then stop', minutes: 5 },
-    ];
-  }
-  if (/\b(call|phone|book|appointment|dentist|doctor|schedule)\b/.test(t)) {
-    return [
+    ],
+  },
+  {
+    match: /\b(call|phone|book|appointment|dentist|doctor|schedule)\b/i,
+    steps: [
       { title: 'Find the number and write it down', minutes: 2 },
       { title: 'Note the one sentence you need to say', minutes: 2 },
       { title: 'Make the call', minutes: 5 },
-    ];
-  }
-  if (/\b(code|bug|fix|feature|refactor|deploy|test)\b/.test(t)) {
-    return [
+    ],
+  },
+  {
+    match: /\b(code|bug|fix|feature|refactor|deploy|test)\b/i,
+    steps: [
       { title: 'Open the file and find where it lives', minutes: 3 },
       { title: 'Make the smallest change that could work', minutes: 15 },
       { title: 'Run it once and read the output', minutes: 5 },
-    ];
-  }
+    ],
+  },
+  {
+    steps: [
+      { title: 'Set up — open everything you need', minutes: 2 },
+      { title: 'First tiny piece — the smallest visible part', minutes: 5 },
+      { title: 'Main chunk — keep going', minutes: 15 },
+      { title: 'Finish — check it and close out', minutes: 5 },
+    ],
+  },
+];
 
-  return [
-    { title: 'Set up — open everything you need', minutes: 2 },
-    { title: 'First tiny piece — the smallest visible part', minutes: 5 },
-    { title: 'Main chunk — keep going', minutes: 15 },
-    { title: 'Finish — check it and close out', minutes: 5 },
-  ];
+/**
+ * Suggest a tiny starter breakdown for a task title. Deterministic, offline,
+ * no AI needed. The point is to beat activation energy: the first step is
+ * always something you can do in a couple of minutes. The user edits from here.
+ * Pass a localized catalog to get steps (and keyword matching) in that language.
+ */
+export function suggestSteps(title = '', catalog = DEFAULT_BREAKDOWNS) {
+  const t = String(title);
+  for (const entry of catalog) {
+    if (!entry.match || entry.match.test(t)) {
+      return entry.steps.map((s) => ({ ...s }));
+    }
+  }
+  return [];
 }

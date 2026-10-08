@@ -462,6 +462,39 @@ body {
   font-size: 0.82rem;
   margin: 0 0 0.6rem;
 }
+.footer-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.lang {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.lang label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+}
+.lang select {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.lang select:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--brand);
+}
 .data-actions {
   display: flex;
   gap: 0.5rem;

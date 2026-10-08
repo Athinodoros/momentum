@@ -21,68 +21,76 @@
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <a class="skip-link" href="#onething">Skip to the one thing</a>
+    <a class="skip-link" href="#onething" data-i18n="skip">Skip to the one thing</a>
 
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true">▲</span>
         <h1>Momentum</h1>
       </div>
-      <dl class="stats" id="stats" aria-live="polite" aria-label="Your momentum">
-        <div class="stat"><dt>Done today</dt><dd id="statToday">0</dd></div>
-        <div class="stat"><dt>Day streak</dt><dd id="statStreak">0</dd></div>
-        <div class="stat"><dt>Open</dt><dd id="statOpen">0</dd></div>
+      <dl class="stats" id="stats" aria-live="polite" aria-label="Momentum">
+        <div class="stat"><dt data-i18n="stat_today">Done today</dt><dd id="statToday">0</dd></div>
+        <div class="stat"><dt data-i18n="stat_streak">Day streak</dt><dd id="statStreak">0</dd></div>
+        <div class="stat"><dt data-i18n="stat_open">Open</dt><dd id="statOpen">0</dd></div>
       </dl>
     </header>
 
     <main>
       <!-- THE ONE THING -->
       <section id="onething" class="onething" aria-labelledby="onething-h">
-        <h2 id="onething-h" class="section-label">Your one thing right now</h2>
+        <h2 id="onething-h" class="section-label" data-i18n="sec_onething">Your one thing right now</h2>
         <div id="hero" class="hero"><!-- rendered by app.js --></div>
       </section>
 
       <!-- BRAIN DUMP -->
       <section class="capture" aria-labelledby="capture-h">
-        <h2 id="capture-h" class="section-label">Brain dump</h2>
+        <h2 id="capture-h" class="section-label" data-i18n="sec_braindump">Brain dump</h2>
         <form id="captureForm" class="capture-form" autocomplete="off">
           <input
             id="captureInput"
             name="title"
             type="text"
             placeholder="What's on your mind? One thing per line is fine."
+            data-i18n-ph="capture_ph"
+            data-i18n-aria="capture_aria"
             aria-label="Add a task"
             maxlength="200"
           />
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="submit" class="btn btn-primary" data-i18n="add">Add</button>
         </form>
-        <p class="hint">Get it out of your head first. Sort it out later.</p>
+        <p class="hint" data-i18n="hint">Get it out of your head first. Sort it out later.</p>
       </section>
 
       <!-- TASK LIST -->
       <section class="tasks" aria-labelledby="tasks-h">
-        <h2 id="tasks-h" class="section-label">Everything else</h2>
+        <h2 id="tasks-h" class="section-label" data-i18n="sec_tasks">Everything else</h2>
         <ul id="taskList" class="task-list"><!-- rendered by app.js --></ul>
-        <p id="tasksEmpty" class="empty" hidden>Nothing here yet. Add something above.</p>
+        <p id="tasksEmpty" class="empty" data-i18n="tasks_empty" hidden>Nothing here yet. Add something above.</p>
       </section>
 
       <!-- WINS -->
       <section class="wins" aria-labelledby="wins-h">
-        <h2 id="wins-h" class="section-label">Wins today</h2>
+        <h2 id="wins-h" class="section-label" data-i18n="sec_wins">Wins today</h2>
         <ul id="winList" class="win-list" aria-live="polite"><!-- rendered by app.js --></ul>
-        <p id="winsEmpty" class="empty">No wins logged yet today. The first one is the hardest.</p>
+        <p id="winsEmpty" class="empty" data-i18n="wins_empty">No wins logged yet today. The first one is the hardest.</p>
       </section>
     </main>
 
     <footer class="footer">
-      <p class="privacy">
+      <p class="privacy" data-i18n="privacy">
         Everything stays on this device. No account, no server, no tracking.
       </p>
-      <div class="data-actions">
-        <button id="exportBtn" class="btn btn-ghost" type="button">Export data</button>
-        <button id="importBtn" class="btn btn-ghost" type="button">Import</button>
-        <input id="importFile" type="file" accept="application/json" hidden />
-        <button id="clearBtn" class="btn btn-ghost btn-danger" type="button">Clear all</button>
+      <div class="footer-row">
+        <div class="lang">
+          <label for="langSelect" data-i18n="language">Language</label>
+          <select id="langSelect" aria-label="Language"></select>
+        </div>
+        <div class="data-actions">
+          <button id="exportBtn" class="btn btn-ghost" type="button" data-i18n="export">Export data</button>
+          <button id="importBtn" class="btn btn-ghost" type="button" data-i18n="import_">Import</button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+          <button id="clearBtn" class="btn btn-ghost btn-danger" type="button" data-i18n="clear">Clear all</button>
+        </div>
       </div>
     </footer>
 

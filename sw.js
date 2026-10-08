@@ -1,6 +1,6 @@
 // Service worker: cache the app shell so Momentum opens and works with no
 // network. Data never goes through here — it lives in localStorage on-device.
-const CACHE = 'momentum-v2';
+const CACHE = 'momentum-v3';
 const SHELL = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const SHELL = [
   './js/model.js',
   './js/timer.js',
   './js/store.js',
+  './js/i18n.js',
   './icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',

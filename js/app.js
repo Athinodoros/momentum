@@ -1,6 +1,6 @@
 // Browser wiring: render state to the DOM, handle input, drive the focus timer.
-// All domain decisions live in model.js; all timer math lives in timer.js.
-// This file only connects them to the screen and to localStorage.
+// All domain decisions live in model.js; all timer math lives in timer.js; all
+// user-facing text lives in i18n.js. This file only connects them to the screen.
 
 import { createStore, localStorageBackend } from './store.js';
 import {
@@ -25,13 +25,13 @@ import {
   startTimer,
   pauseTimer,
   tickTimer,
-  resetTimer,
   addTime,
   remainingMs,
   isComplete,
   progress,
   formatClock,
 } from './timer.js';
+import * as i18n from './i18n.js';
 
 // --- state + persistence ---------------------------------------------------
 
@@ -46,7 +46,7 @@ function commit(next) {
 
 // Focus timer lives outside app state (it's ephemeral, not worth persisting).
 let timer = null; // null when idle
-let timerTarget = null; // { taskId, stepId|null } the timer is counting for
+let timerTarget = null; // { key } the timer is counting for
 let tickHandle = null;
 
 // --- tiny DOM helper --------------------------------------------------------
@@ -56,7 +56,6 @@ function el(tag, props = {}, children = []) {
   for (const [k, v] of Object.entries(props)) {
     if (k === 'class') node.className = v;
     else if (k === 'text') node.textContent = v;
-    else if (k === 'html') node.innerHTML = v; // only used with trusted static strings
     else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
     else if (k === 'dataset') Object.assign(node.dataset, v);
     else if (v === true) node.setAttribute(k, '');
@@ -70,6 +69,42 @@ function el(tag, props = {}, children = []) {
 }
 
 const $ = (id) => document.getElementById(id);
+const t = (key, params) => i18n.t(key, params);
+
+// --- static text (HTML attributes) -----------------------------------------
+
+function applyStaticI18n() {
+  if (document.documentElement) document.documentElement.lang = i18n.getLocale();
+  document.title = t('title');
+  const desc = document.querySelector?.('meta[name="description"]');
+  if (desc) desc.setAttribute('content', t('meta_desc'));
+  for (const node of document.querySelectorAll?.('[data-i18n]') ?? []) {
+    node.textContent = t(node.dataset.i18n);
+  }
+  for (const node of document.querySelectorAll?.('[data-i18n-ph]') ?? []) {
+    node.setAttribute('placeholder', t(node.dataset.i18nPh));
+  }
+  for (const node of document.querySelectorAll?.('[data-i18n-aria]') ?? []) {
+    node.setAttribute('aria-label', t(node.dataset.i18nAria));
+  }
+}
+
+function setupLangSelect() {
+  const sel = $('langSelect');
+  if (!sel) return;
+  sel.innerHTML = '';
+  for (const l of i18n.LOCALES) {
+    sel.append(el('option', { value: l.code }, l.label));
+  }
+  sel.value = i18n.getLocale();
+  sel.addEventListener('change', (e) => {
+    i18n.setLocale(e.target.value);
+    state = { ...state, settings: { ...state.settings, lang: i18n.getLocale() } };
+    store.save(state);
+    applyStaticI18n();
+    render();
+  });
+}
 
 // --- rendering --------------------------------------------------------------
 
@@ -95,8 +130,8 @@ function renderHero() {
   if (!next) {
     hero.className = 'hero is-empty';
     hero.append(
-      el('p', { class: 'hero-title', text: 'All clear.' }),
-      el('p', { text: 'Nothing open right now. Add something, or go enjoy the gap.' }),
+      el('p', { class: 'hero-title', text: t('allclear_title') }),
+      el('p', { text: t('allclear_body') }),
     );
     stopTick();
     timer = null;
@@ -115,14 +150,14 @@ function renderHero() {
     stopTick();
   }
 
-  hero.append(el('p', { class: 'hero-eyebrow', text: step ? 'Starting with' : 'Just this' }));
+  hero.append(el('p', { class: 'hero-eyebrow', text: step ? t('eyebrow_step') : t('eyebrow_task') }));
   hero.append(el('h3', { class: 'hero-title', text: task.title }));
 
   if (step) {
     hero.append(
       el('div', { class: 'hero-step' }, [
         el('span', { text: step.title }),
-        el('span', { class: 'mins', text: `${step.minutes} min` }),
+        el('span', { class: 'mins', text: t('min', { n: step.minutes }) }),
       ]),
     );
   }
@@ -135,12 +170,8 @@ function renderTimer() {
   const wrap = el('div', { class: 'timer', id: 'timerBox' });
   const readoutText = timer ? formatClock(remainingMs(tickNow(timer))) : '05:00';
   wrap.append(el('div', { class: 'timer-readout', id: 'timerReadout', text: readoutText }));
-  const bar = el('div', { class: 'progress' }, [
-    el('div', { class: 'progress-bar', id: 'timerBar' }),
-  ]);
-  wrap.append(bar);
+  wrap.append(el('div', { class: 'progress' }, [el('div', { class: 'progress-bar', id: 'timerBar' })]));
   if (timer && isComplete(timer)) wrap.classList.add('is-done');
-  // Paint the bar immediately.
   queueMicrotask(() => paintTimer());
   return wrap;
 }
@@ -150,64 +181,52 @@ function renderHeroActions(task, step) {
   const quick = state.settings.quickStartMin || 5;
   const long = state.settings.defaultFocusMin || 25;
 
-  const doneBtn = el('button', {
-    class: 'btn btn-accent',
-    type: 'button',
-    onclick: () => completeCurrent(task, step),
-  }, step ? 'Finish step ✓' : 'Mark done ✓');
+  const doneBtn = el(
+    'button',
+    { class: 'btn btn-accent', type: 'button', onclick: () => completeCurrent(task, step) },
+    step ? t('finish_step') : t('mark_done'),
+  );
 
   if (!timer) {
     wrap.append(
-      el('button', {
-        class: 'btn btn-primary grow',
-        type: 'button',
-        onclick: () => beginFocus(quick, task, step),
-      }, `Start — just ${quick} min`),
-      el('button', {
-        class: 'btn btn-ghost',
-        type: 'button',
-        onclick: () => beginFocus(long, task, step),
-      }, `Focus ${long} min`),
+      el('button', { class: 'btn btn-primary grow', type: 'button', onclick: () => beginFocus(quick, task, step) }, t('start_just', { min: quick })),
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => beginFocus(long, task, step) }, t('focus_min', { min: long })),
       doneBtn,
     );
   } else if (isComplete(timer)) {
     wrap.append(
-      el('button', { class: 'btn btn-accent grow', type: 'button', onclick: () => completeCurrent(task, step) }, 'Done ✓'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => beginFocus(quick, task, step) }, `Another ${quick} min`),
+      el('button', { class: 'btn btn-accent grow', type: 'button', onclick: () => completeCurrent(task, step) }, t('done')),
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => beginFocus(quick, task, step) }, t('another_min', { min: quick })),
     );
   } else if (timer.running) {
     wrap.append(
-      el('button', { class: 'btn', type: 'button', onclick: pauseFocus }, 'Pause'),
-      el('button', { class: 'btn', type: 'button', onclick: () => extendFocus(5) }, '+5 min'),
-      el('button', { class: 'btn btn-accent grow', type: 'button', onclick: () => completeCurrent(task, step) }, step ? 'Finish step ✓' : 'Done ✓'),
+      el('button', { class: 'btn', type: 'button', onclick: pauseFocus }, t('pause')),
+      el('button', { class: 'btn', type: 'button', onclick: () => extendFocus(5) }, t('add5')),
+      el('button', { class: 'btn btn-accent grow', type: 'button', onclick: () => completeCurrent(task, step) }, step ? t('finish_step') : t('done')),
     );
   } else {
     wrap.append(
-      el('button', { class: 'btn btn-primary grow', type: 'button', onclick: resumeFocus }, 'Resume'),
-      el('button', { class: 'btn btn-ghost', type: 'button', onclick: clearFocus }, 'Reset'),
+      el('button', { class: 'btn btn-primary grow', type: 'button', onclick: resumeFocus }, t('resume')),
+      el('button', { class: 'btn btn-ghost', type: 'button', onclick: clearFocus }, t('reset')),
       doneBtn,
     );
   }
 
   const skip = el('div', { class: 'hero-actions', style: 'margin-top:.4rem' }, [
-    el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => skipCurrent(task) }, 'Not this right now — show me something else'),
+    el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => skipCurrent(task) }, t('skip_cta')),
   ]);
-  const container = el('div', {}, [wrap, skip]);
-  return container;
+  return el('div', {}, [wrap, skip]);
 }
 
 function renderTasks() {
   const list = $('taskList');
   list.innerHTML = '';
-  const open = state.tasks.filter((t) => !t.done);
-  const done = state.tasks.filter((t) => t.done);
+  const open = state.tasks.filter((tk) => !tk.done);
+  const done = state.tasks.filter((tk) => tk.done);
   const ordered = [...open, ...done];
 
   $('tasksEmpty').hidden = ordered.length !== 0;
-
-  for (const task of ordered) {
-    list.append(renderTask(task));
-  }
+  for (const task of ordered) list.append(renderTask(task));
 }
 
 function renderTask(task) {
@@ -216,37 +235,39 @@ function renderTask(task) {
   const check = el('input', {
     class: 'task-check',
     type: 'checkbox',
-    'aria-label': `Mark "${task.title}" done`,
+    'aria-label': t('aria_mark_done', { title: task.title }),
     onchange: (e) => commit(setTaskDone(state, task.id, e.target.checked)),
   });
   check.checked = task.done;
 
-  const title = el('span', { class: 'task-title', text: task.title });
-
-  const row = el('div', { class: 'task-row' }, [check, title]);
+  const row = el('div', { class: 'task-row' }, [check, el('span', { class: 'task-title', text: task.title })]);
 
   if (task.steps.length) {
     const left = task.steps.filter((s) => !s.done).length;
-    row.append(el('span', { class: 'task-badge', text: left ? `${left} left` : 'all steps done' }));
+    row.append(el('span', { class: 'task-badge', text: left ? t('left_count', { n: left }) : t('all_steps_done') }));
   }
 
-  const star = el('button', {
-    class: `icon-btn${task.starred ? ' is-starred' : ''}`,
-    type: 'button',
-    title: task.starred ? 'Unpin' : 'Pin to top',
-    'aria-label': task.starred ? 'Unpin task' : 'Pin task to top',
-    onclick: () => commit(toggleStar(state, task.id)),
-  }, task.starred ? '★' : '☆');
-  row.append(star);
+  const starLabel = task.starred ? t('aria_unpin') : t('aria_pin');
+  row.append(
+    el('button', {
+      class: `icon-btn${task.starred ? ' is-starred' : ''}`,
+      type: 'button',
+      title: starLabel,
+      'aria-label': starLabel,
+      onclick: () => commit(toggleStar(state, task.id)),
+    }, task.starred ? '★' : '☆'),
+  );
 
-  const del = el('button', {
-    class: 'icon-btn',
-    type: 'button',
-    title: 'Delete',
-    'aria-label': `Delete "${task.title}"`,
-    onclick: () => commit(removeTask(state, task.id)),
-  }, '✕');
-  row.append(del);
+  const delLabel = t('aria_delete', { title: task.title });
+  row.append(
+    el('button', {
+      class: 'icon-btn',
+      type: 'button',
+      title: delLabel,
+      'aria-label': delLabel,
+      onclick: () => commit(removeTask(state, task.id)),
+    }, '✕'),
+  );
 
   li.append(row);
 
@@ -255,7 +276,7 @@ function renderTask(task) {
     for (const s of task.steps) {
       const sCheck = el('input', {
         type: 'checkbox',
-        'aria-label': `Mark step "${s.title}" done`,
+        'aria-label': t('aria_step_done', { title: s.title }),
         onchange: (e) => commit(setStepDone(state, task.id, s.id, e.target.checked)),
       });
       sCheck.checked = s.done;
@@ -263,12 +284,12 @@ function renderTask(task) {
         el('li', { class: `step${s.done ? ' is-done' : ''}` }, [
           sCheck,
           el('span', { text: s.title }),
-          el('span', { class: 'mins', text: `${s.minutes}m` }),
+          el('span', { class: 'mins', text: t('min_abbrev', { n: s.minutes }) }),
           el('button', {
             class: 'icon-btn btn-sm',
             type: 'button',
-            'aria-label': 'Remove step',
-            title: 'Remove step',
+            'aria-label': t('aria_remove_step'),
+            title: t('aria_remove_step'),
             onclick: () => commit(removeStep(state, task.id, s.id)),
           }, '✕'),
         ]),
@@ -284,16 +305,12 @@ function renderTask(task) {
         el('button', {
           class: 'btn btn-ghost btn-sm',
           type: 'button',
-          onclick: () => commit(addSteps(state, task.id, suggestSteps(task.title))),
-        }, '✶ Break it down'),
+          onclick: () => commit(addSteps(state, task.id, suggestSteps(task.title, i18n.breakdownCatalog()))),
+        }, t('break_it_down')),
       );
     }
     tools.append(
-      el('button', {
-        class: 'btn btn-ghost btn-sm',
-        type: 'button',
-        onclick: () => addStepPrompt(task),
-      }, '+ Add step'),
+      el('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => addStepPrompt(task) }, t('add_step')),
     );
     li.append(tools);
   }
@@ -360,11 +377,8 @@ function clearFocus() {
 
 function completeCurrent(task, step) {
   clearFocus();
-  if (step) {
-    commit(setStepDone(state, task.id, step.id, true));
-  } else {
-    commit(setTaskDone(state, task.id, true));
-  }
+  if (step) commit(setStepDone(state, task.id, step.id, true));
+  else commit(setTaskDone(state, task.id, true));
   celebrate();
   toast(randomCheer());
 }
@@ -372,10 +386,9 @@ function completeCurrent(task, step) {
 function skipCurrent(task) {
   clearFocus();
   commit(deferTask(state, task.id, Date.now()));
-  toast('Okay — moved to the back.');
+  toast(t('toast_skip'));
 }
 
-// tick loop: update the readout in place without re-rendering the whole hero
 function startTick() {
   stopTick();
   tickHandle = setInterval(() => {
@@ -396,8 +409,8 @@ function stopTick() {
   }
 }
 
-function tickNow(t) {
-  return t.running ? tickTimer(t, Date.now()) : t;
+function tickNow(timerState) {
+  return timerState.running ? tickTimer(timerState, Date.now()) : timerState;
 }
 
 function paintTimer() {
@@ -414,28 +427,28 @@ function paintTimer() {
 function onTimerComplete() {
   renderHero();
   celebrate();
-  toast("Time's up. That's a real focus block — log it or keep going.");
+  toast(t('toast_timeup'));
   beep();
 }
 
 // --- small interactions -----------------------------------------------------
 
 function addStepPrompt(task) {
-  const title = window.prompt(`Add a step to "${task.title}":`);
+  const title = window.prompt(t('prompt_add_step', { title: task.title }));
   if (!title) return;
-  const mins = window.prompt('About how many minutes? (just a guess)', '10');
+  const mins = window.prompt(t('prompt_minutes'), '10');
   const n = Number(mins);
   commit(addStep(state, task.id, title, Number.isFinite(n) && n > 0 ? n : 5));
 }
 
 let toastHandle = null;
 function toast(msg) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.hidden = false;
+  const node = $('toast');
+  node.textContent = msg;
+  node.hidden = false;
   clearTimeout(toastHandle);
   toastHandle = setTimeout(() => {
-    t.hidden = true;
+    node.hidden = true;
   }, 3200);
 }
 
@@ -447,15 +460,9 @@ function celebrate() {
   hero.classList.add('celebrate');
 }
 
-const CHEERS = [
-  'Done. That counts.',
-  'One down. Momentum.',
-  'Nice — that was the hard part.',
-  'Logged. Keep the thread going.',
-  'That is a win. Take it.',
-];
 function randomCheer() {
-  return CHEERS[Math.floor(Math.random() * CHEERS.length)];
+  const list = i18n.cheers();
+  return list[Math.floor(Math.random() * list.length)];
 }
 
 function beep() {
@@ -498,7 +505,7 @@ function exportData() {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  toast('Exported. Your data just left in a file you control.');
+  toast(t('toast_exported'));
 }
 
 function importData(file) {
@@ -506,23 +513,23 @@ function importData(file) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(String(reader.result));
-      if (!window.confirm('Replace everything currently here with the imported data?')) return;
+      if (!window.confirm(t('confirm_import'))) return;
       commit(migrate(parsed));
-      toast('Imported.');
+      toast(t('toast_imported'));
     } catch {
-      toast('That file could not be read as Momentum data.');
+      toast(t('toast_import_fail'));
     }
   };
   reader.readAsText(file);
 }
 
 function clearAll() {
-  if (!window.confirm('Delete all tasks and wins on this device? This cannot be undone.')) return;
+  if (!window.confirm(t('confirm_clear'))) return;
   store.clear();
   state = initialState();
   clearFocus();
   render();
-  toast('Cleared.');
+  toast(t('toast_cleared'));
 }
 
 // --- events -----------------------------------------------------------------
@@ -530,9 +537,7 @@ function clearAll() {
 $('captureForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = $('captureInput');
-  const value = input.value;
-  // Support pasting several lines at once — one task per line.
-  const lines = value.split('\n').map((l) => l.trim()).filter(Boolean);
+  const lines = input.value.split('\n').map((l) => l.trim()).filter(Boolean);
   let next = state;
   for (const line of lines) next = addTask(next, line);
   if (next !== state) commit(next);
@@ -549,7 +554,6 @@ $('importFile').addEventListener('change', (e) => {
 });
 $('clearBtn').addEventListener('click', clearAll);
 
-// Keep the clock-dependent view honest if the tab is left open across time.
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     if (timer && timer.running) {
@@ -570,10 +574,19 @@ document.addEventListener('visibilitychange', () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      /* offline caching is a bonus; the app works without it */
-    });
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 
+// --- boot -------------------------------------------------------------------
+
+function navLangs() {
+  if (typeof navigator === 'undefined') return [];
+  if (Array.isArray(navigator.languages) && navigator.languages.length) return navigator.languages;
+  return navigator.language ? [navigator.language] : [];
+}
+
+i18n.setLocale(i18n.detectLocale(state.settings?.lang, navLangs()));
+applyStaticI18n();
+setupLangSelect();
 render();

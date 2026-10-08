@@ -47,6 +47,13 @@ Momentum is shaped around five facts about attention:
 - **Wins** — every finished step or task is logged with a timestamp. Deleting a task never erases the fact that you did it.
 - **"Not this right now"** — defer the current thing without guilt; it slides to the back and something else comes up.
 
+## Languages
+
+Full UI in **English, German, Greek, French, and Spanish** — including the task
+breakdowns, which match keywords and generate steps in the chosen language. It
+auto-detects your phone's language on first open; switch anytime from the picker
+in the footer. Your choice is remembered on the device.
+
 ## Your data is yours
 
 - Stored only in this browser's `localStorage`.
