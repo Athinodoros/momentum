@@ -4,12 +4,25 @@
 
 No account. No server. No tracking. Everything lives in your browser on your device.
 
+**▶ Use it now: https://athinodoros.github.io/momentum/**
+
+## Install it on your phone
+
+It's a PWA, so it installs straight from the browser — no app store.
+
+- **iPhone (Safari):** open the link → tap **Share** → **Add to Home Screen**.
+- **Android (Chrome):** open the link → menu **⋮** → **Install app** (or **Add to Home screen**).
+
+It then opens full-screen with its own icon and works offline. Your tasks never leave the phone; use **Export** now and then for a backup file you control.
+
+## Run it locally
+
 ```
 npm start
 # open http://localhost:4321
 ```
 
-That's it — no install step, no dependencies.
+No build step, no dependencies.
 
 ---
 
