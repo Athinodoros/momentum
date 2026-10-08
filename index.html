@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#5b5bd6" />
+    <meta
+      name="description"
+      content="Momentum turns overwhelm into one next action. A private, offline focus app built for ADHD brains."
+    />
+    <!-- installable on iOS + Android home screens -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Momentum" />
+    <title>Momentum — one next action</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="manifest" href="app.webmanifest" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#onething">Skip to the one thing</a>
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">▲</span>
+        <h1>Momentum</h1>
+      </div>
+      <dl class="stats" id="stats" aria-live="polite" aria-label="Your momentum">
+        <div class="stat"><dt>Done today</dt><dd id="statToday">0</dd></div>
+        <div class="stat"><dt>Day streak</dt><dd id="statStreak">0</dd></div>
+        <div class="stat"><dt>Open</dt><dd id="statOpen">0</dd></div>
+      </dl>
+    </header>
+
+    <main>
+      <!-- THE ONE THING -->
+      <section id="onething" class="onething" aria-labelledby="onething-h">
+        <h2 id="onething-h" class="section-label">Your one thing right now</h2>
+        <div id="hero" class="hero"><!-- rendered by app.js --></div>
+      </section>
+
+      <!-- BRAIN DUMP -->
+      <section class="capture" aria-labelledby="capture-h">
+        <h2 id="capture-h" class="section-label">Brain dump</h2>
+        <form id="captureForm" class="capture-form" autocomplete="off">
+          <input
+            id="captureInput"
+            name="title"
+            type="text"
+            placeholder="What's on your mind? One thing per line is fine."
+            aria-label="Add a task"
+            maxlength="200"
+          />
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+        <p class="hint">Get it out of your head first. Sort it out later.</p>
+      </section>
+
+      <!-- TASK LIST -->
+      <section class="tasks" aria-labelledby="tasks-h">
+        <h2 id="tasks-h" class="section-label">Everything else</h2>
+        <ul id="taskList" class="task-list"><!-- rendered by app.js --></ul>
+        <p id="tasksEmpty" class="empty" hidden>Nothing here yet. Add something above.</p>
+      </section>
+
+      <!-- WINS -->
+      <section class="wins" aria-labelledby="wins-h">
+        <h2 id="wins-h" class="section-label">Wins today</h2>
+        <ul id="winList" class="win-list" aria-live="polite"><!-- rendered by app.js --></ul>
+        <p id="winsEmpty" class="empty">No wins logged yet today. The first one is the hardest.</p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p class="privacy">
+        Everything stays on this device. No account, no server, no tracking.
+      </p>
+      <div class="data-actions">
+        <button id="exportBtn" class="btn btn-ghost" type="button">Export data</button>
+        <button id="importBtn" class="btn btn-ghost" type="button">Import</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+        <button id="clearBtn" class="btn btn-ghost btn-danger" type="button">Clear all</button>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "momentum",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first focus app that turns overwhelm into one next action. Built for ADHD brains.",
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.mjs",
+    "serve": "node server.mjs",
+    "icons": "node tools/gen-icons.mjs"
+  },
+  "license": "MIT"
+}
